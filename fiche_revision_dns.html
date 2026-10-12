@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Révision DNS — BIND9 / Debian</title>
+<style>
+:root{
+  --bg:#0b1220; --panel:#111a2b; --panel2:#172238; --text:#ecf3ff;
+  --muted:#9fb0c8; --accent:#5ab0ff; --accent2:#7ee0c3; --danger:#ffb86b;
+  --border:#253551; --code:#08111f; --shadow:0 18px 50px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:
+radial-gradient(circle at top right,#16325b 0,transparent 32%),
+linear-gradient(180deg,#08101c 0%,#0b1220 100%);color:var(--text);line-height:1.6}
+a{color:inherit}
+.container{width:min(1180px,92%);margin:auto}
+header{padding:72px 0 42px;border-bottom:1px solid var(--border)}
+.hero{display:grid;grid-template-columns:1.5fr .9fr;gap:26px;align-items:center}
+.badge{display:inline-block;padding:7px 12px;border:1px solid #34517d;border-radius:999px;background:#0f1f36;color:#bcd8ff;font-size:.88rem}
+h1{font-size:clamp(2.3rem,5vw,4.7rem);line-height:1.02;margin:16px 0}
+h2{font-size:1.8rem;margin:0 0 16px}
+h3{margin:0 0 8px;font-size:1.05rem}
+p{color:#dbe7f7}
+.muted{color:var(--muted)}
+.hero-card,.card,.section{background:linear-gradient(180deg,rgba(23,34,56,.96),rgba(16,25,42,.96));border:1px solid var(--border);border-radius:22px;box-shadow:var(--shadow)}
+.hero-card{padding:22px}
+.kpi{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.kpi div{background:#0c1626;border:1px solid var(--border);padding:14px;border-radius:16px}
+.kpi b{display:block;font-size:1.35rem;color:var(--accent2)}
+nav{position:sticky;top:0;z-index:20;background:rgba(8,16,28,.88);backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
+.nav{display:flex;gap:8px;overflow:auto;padding:10px 0}
+.nav a{white-space:nowrap;text-decoration:none;padding:8px 12px;border-radius:10px;color:#cbd9ec}
+.nav a:hover{background:#14213a;color:white}
+main{padding:34px 0 70px}
+.section{padding:26px;margin:0 0 24px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.card{padding:18px}
+.card strong{color:#fff}
+.callout{border-left:4px solid var(--accent);background:#0e1b30;padding:14px 16px;border-radius:12px;margin:14px 0}
+.warn{border-left-color:var(--danger)}
+.ok{border-left-color:var(--accent2)}
+code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre{background:var(--code);border:1px solid #1f3554;padding:16px;border-radius:15px;overflow:auto;color:#d7ecff}
+.inline{background:#0b1728;border:1px solid #203452;padding:2px 7px;border-radius:7px;color:#bfe1ff}
+table{width:100%;border-collapse:collapse;overflow:hidden;border-radius:14px}
+th,td{padding:12px 13px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{background:#0e1a2c;color:#bfe2ff}
+tr:last-child td{border-bottom:0}
+.flow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.node{padding:12px 16px;background:#0b1728;border:1px solid #28466f;border-radius:14px}
+.arrow{color:var(--accent);font-weight:800;font-size:1.4rem}
+.tag{display:inline-block;padding:4px 9px;border-radius:999px;background:#123258;color:#cfe7ff;font-size:.8rem;margin:3px 4px 3px 0}
+.copy{float:right;border:1px solid #315179;background:#10223b;color:#dcecff;padding:6px 10px;border-radius:9px;cursor:pointer}
+.copy:hover{background:#173052}
+details{background:#0d1829;border:1px solid var(--border);border-radius:13px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:700}
+footer{padding:35px 0;color:var(--muted);text-align:center}
+@media(max-width:850px){.hero,.grid,.grid2{grid-template-columns:1fr}.hero{gap:18px}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container hero">
+    <div>
+      <span class="badge">BTS CIEL • Debian • BIND9</span>
+      <h1>Fiche de révision DNS</h1>
+      <p class="muted">Tout l’essentiel sur le DNS, la résolution directe/inverse, les fichiers Debian, BIND9 et les commandes à connaître pour ton TP avec <strong>TITAN</strong>.</p>
+      <div class="flow">
+        <span class="tag">Domaine : ciel.edu</span>
+        <span class="tag">DNS : 192.168.0.1</span>
+        <span class="tag">Port : 53 UDP/TCP</span>
+      </div>
+    </div>
+    <div class="hero-card">
+      <h3>À retenir en 20 secondes</h3>
+      <div class="kpi">
+        <div><span class="muted">Résolution directe</span><b>Nom → IP</b></div>
+        <div><span class="muted">Résolution inverse</span><b>IP → Nom</b></div>
+        <div><span class="muted">Serveur DNS</span><b>TITAN</b></div>
+        <div><span class="muted">Commande test</span><b>dig</b></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <div class="container nav">
+    <a href="#principe">Principe</a>
+    <a href="#noms">Noms DNS</a>
+    <a href="#records">Enregistrements</a>
+    <a href="#client">Client Debian</a>
+    <a href="#serveur">Serveur BIND9</a>
+    <a href="#zones">Zones</a>
+    <a href="#tests">Tests</a>
+    <a href="#internet">Internet</a>
+    <a href="#memo">Mémo</a>
+  </div>
+</nav>
+
+<main class="container">
+
+<section class="section" id="principe">
+  <h2>1. Principe du DNS</h2>
+  <p>Le DNS traduit des noms faciles à retenir en adresses IP.</p>
+  <div class="flow">
+    <div class="node">Client</div><div class="arrow">→</div>
+    <div class="node">Résolveur</div><div class="arrow">→</div>
+    <div class="node">Serveur DNS</div><div class="arrow">→</div>
+    <div class="node">Espace de noms</div>
+  </div>
+  <div class="callout ok"><strong>Exemple :</strong> <span class="inline">titan.ciel.edu</span> → <span class="inline">192.168.0.1</span></div>
+  <div class="grid">
+    <div class="card"><h3>Résolveur</h3><p>Partie du client qui demande une résolution de nom.</p></div>
+    <div class="card"><h3>Serveur DNS</h3><p>Reçoit la requête et cherche la réponse.</p></div>
+    <div class="card"><h3>Espace de dénomination</h3><p>Organisation hiérarchique des noms DNS.</p></div>
+  </div>
+</section>
+
+<section class="section" id="noms">
+  <h2>2. Noms de domaine</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3>Exemple : titan.ciel.edu</h3>
+      <p><strong>titan</strong> = hôte<br><strong>ciel</strong> = SLD<br><strong>edu</strong> = TLD</p>
+    </div>
+    <div class="card">
+      <h3>FQDN</h3>
+      <p>Nom complet d’une machine : <span class="inline">titan.ciel.edu.</span></p>
+      <p class="muted">Le point final représente la racine DNS.</p>
+    </div>
+  </div>
+  <div class="grid">
+    <div class="card"><h3>Label</h3><p>63 octets maximum.</p></div>
+    <div class="card"><h3>Nom complet</h3><p>255 octets maximum.</p></div>
+    <div class="card"><h3>AFNIC</h3><p>Gère notamment le domaine <strong>.fr</strong>.</p></div>
+  </div>
+</section>
+
+<section class="section" id="records">
+  <h2>3. Enregistrements DNS</h2>
+  <table>
+    <thead><tr><th>Type</th><th>Rôle</th><th>Exemple</th></tr></thead>
+    <tbody>
+      <tr><td><strong>A</strong></td><td>Nom → IPv4</td><td><code>titan IN A 192.168.0.1</code></td></tr>
+      <tr><td><strong>NS</strong></td><td>Serveur DNS autoritaire</td><td><code>@ IN NS titan.ciel.edu.</code></td></tr>
+      <tr><td><strong>MX</strong></td><td>Serveur de messagerie</td><td><code>@ IN MX 10 mail.ciel.edu.</code></td></tr>
+      <tr><td><strong>CNAME</strong></td><td>Alias</td><td><code>www IN CNAME titan.ciel.edu.</code></td></tr>
+      <tr><td><strong>SOA</strong></td><td>Infos principales de la zone</td><td>Serveur maître, serial, TTL…</td></tr>
+      <tr><td><strong>PTR</strong></td><td>IP → Nom</td><td><code>1 IN PTR titan.ciel.edu.</code></td></tr>
+      <tr><td><strong>HINFO</strong></td><td>Infos système/hôte</td><td>Peu utilisé</td></tr>
+      <tr><td><strong>MINFO</strong></td><td>Infos boîte mail</td><td>Ancien / très peu utilisé</td></tr>
+      <tr><td><strong>IN</strong></td><td>Classe Internet</td><td>Ce n’est pas un type comme A ou PTR</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="section" id="client">
+  <h2>4. Côté client Debian</h2>
+  <div class="grid">
+    <div class="card"><h3>/etc/hosts</h3><p>Résolution locale nom ↔ IP.</p></div>
+    <div class="card"><h3>/etc/hostname</h3><p>Nom de la machine.</p></div>
+    <div class="card"><h3>/etc/resolv.conf</h3><p>Serveur(s) DNS utilisés.</p></div>
+  </div>
+
+  <h3>Exemple de /etc/resolv.conf</h3>
+  <button class="copy" onclick="copyBlock(this)">Copier</button>
+  <pre><code>nameserver 192.168.0.1
+search ciel.edu</code></pre>
+
+  <h3>Ordre de résolution</h3>
+  <p>Il se règle dans <span class="inline">/etc/nsswitch.conf</span>.</p>
+  <pre><code>hosts: files dns</code></pre>
+  <div class="callout"><strong>Ordre :</strong> d’abord <code>/etc/hosts</code>, puis le DNS.</div>
+</section>
+
+<section class="section" id="serveur">
+  <h2>5. Côté serveur Debian — TITAN</h2>
+  <div class="grid">
+    <div class="card"><h3>Port</h3><p><strong>53</strong></p></div>
+    <div class="card"><h3>Protocoles</h3><p><strong>UDP + TCP</strong></p></div>
+    <div class="card"><h3>Serveur</h3><p><strong>BIND9</strong></p></div>
+  </div>
+
+  <h3>Installation</h3>
+  <button class="copy" onclick="copyBlock(this)">Copier</button>
+  <pre><code>apt update
+apt install bind9 bind9-utils dnsutils</code></pre>
+
+  <table>
+    <thead><tr><th>Fichier</th><th>Rôle</th></tr></thead>
+    <tbody>
+      <tr><td><code>/etc/bind/named.conf</code></td><td>Fichier principal de BIND</td></tr>
+      <tr><td><code>/etc/bind/named.conf.options</code></td><td>Options générales, récursion, forwarders</td></tr>
+      <tr><td><code>/etc/bind/named.conf.local</code></td><td>Déclaration des zones</td></tr>
+      <tr><td><code>/etc/bind/db.ciel.edu</code></td><td>Zone directe</td></tr>
+      <tr><td><code>/etc/bind/db.192.168.0</code></td><td>Zone inverse</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="section" id="zones">
+  <h2>6. Zones DNS de ton TP</h2>
+
+  <h3>named.conf.local</h3>
+  <button class="copy" onclick="copyBlock(this)">Copier</button>
+  <pre><code>zone "ciel.edu" {
+    type master;
+    file "/etc/bind/db.ciel.edu";
+};
+
+zone "0.168.192.in-addr.arpa" {
+    type master;
+    file "/etc/bind/db.192.168.0";
+};</code></pre>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Zone directe — db.ciel.edu</h3>
+      <pre><code>$TTL 86400
+
+@ IN SOA titan.ciel.edu. admin.ciel.edu. (
+  2026100501
+  3600
+  1800
+  604800
+  86400
+)
+
+@       IN NS titan.ciel.edu.
+titan   IN A  192.168.0.1
+client1 IN A  192.168.0.2
+client2 IN A  192.168.0.101</code></pre>
+    </div>
+    <div class="card">
+      <h3>Zone inverse — db.192.168.0</h3>
+      <pre><code>$TTL 86400
+
+@ IN SOA titan.ciel.edu. admin.ciel.edu. (
+  2026100501
+  3600
+  1800
+  604800
+  86400
+)
+
+@   IN NS  titan.ciel.edu.
+1   IN PTR titan.ciel.edu.
+2   IN PTR client1.ciel.edu.
+101 IN PTR client2.ciel.edu.</code></pre>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="tests">
+  <h2>7. Vérification et tests</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3>Vérifier la configuration</h3>
+      <pre><code>named-checkconf
+
+named-checkzone ciel.edu /etc/bind/db.ciel.edu
+
+named-checkzone 0.168.192.in-addr.arpa /etc/bind/db.192.168.0</code></pre>
+      <p>Résultat attendu : <strong>OK</strong></p>
+    </div>
+    <div class="card">
+      <h3>Redémarrer et vérifier</h3>
+      <pre><code>systemctl restart bind9
+systemctl status bind9
+
+ss -lntup | grep :53</code></pre>
+    </div>
+  </div>
+
+  <h3>Résolution directe</h3>
+  <pre><code>dig @192.168.0.1 titan.ciel.edu
+dig @192.168.0.1 client1.ciel.edu
+dig @192.168.0.1 client2.ciel.edu</code></pre>
+
+  <h3>Résolution inverse</h3>
+  <pre><code>dig @192.168.0.1 -x 192.168.0.1
+dig @192.168.0.1 -x 192.168.0.2
+dig @192.168.0.1 -x 192.168.0.101</code></pre>
+</section>
+
+<section class="section" id="internet">
+  <h2>8. Résolution Internet</h2>
+  <p>Teste d’abord :</p>
+  <pre><code>dig google.fr</code></pre>
+  <div class="callout warn">
+    Si <strong>ciel.edu fonctionne</strong> mais pas Internet, tu peux avoir besoin de configurer les <strong>forwarders</strong> dans <code>named.conf.options</code>.
+  </div>
+
+  <h3>Exemple de named.conf.options</h3>
+  <pre><code>options {
+    directory "/var/cache/bind";
+
+    recursion yes;
+
+    forwarders {
+        8.8.8.8;
+        1.1.1.1;
+    };
+};</code></pre>
+  <p class="muted">Les DNS à utiliser dépendent de ce qui est autorisé sur ton réseau scolaire.</p>
+</section>
+
+<section class="section" id="memo">
+  <h2>9. Mémo express</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3>Fichiers à connaître</h3>
+      <p>
+        <code>/etc/hostname</code><br>
+        <code>/etc/hosts</code><br>
+        <code>/etc/resolv.conf</code><br>
+        <code>/etc/nsswitch.conf</code><br>
+        <code>/etc/bind/named.conf.local</code><br>
+        <code>/etc/bind/named.conf.options</code>
+      </p>
+    </div>
+    <div class="card">
+      <h3>Commandes à connaître</h3>
+      <p>
+        <code>dig</code><br>
+        <code>named-checkconf</code><br>
+        <code>named-checkzone</code><br>
+        <code>systemctl restart bind9</code><br>
+        <code>ss -lntup | grep :53</code>
+      </p>
+    </div>
+  </div>
+
+  <details>
+    <summary>Quelle différence entre zone directe et inverse ?</summary>
+    <p><strong>Directe :</strong> nom → IP. <strong>Inverse :</strong> IP → nom.</p>
+  </details>
+  <details>
+    <summary>À quoi sert named.conf.local ?</summary>
+    <p>À déclarer les zones personnalisées comme <code>ciel.edu</code>.</p>
+  </details>
+  <details>
+    <summary>À quoi sert named.conf.options ?</summary>
+    <p>À régler les options générales du serveur, notamment récursion et forwarders.</p>
+  </details>
+  <details>
+    <summary>Quel port utilise DNS ?</summary>
+    <p>Le port <strong>53</strong>, en UDP et TCP.</p>
+  </details>
+</section>
+
+</main>
+
+<footer>
+  <div class="container">Fiche de révision DNS • Debian / BIND9 • Domaine ciel.edu</div>
+</footer>
+
+<script>
+function copyBlock(btn){
+  const pre = btn.nextElementSibling;
+  navigator.clipboard.writeText(pre.innerText).then(()=>{
+    const old = btn.textContent;
+    btn.textContent = "Copié ✓";
+    setTimeout(()=>btn.textContent=old,1200);
+  });
+}
+</script>
+
+</body>
+</html>
